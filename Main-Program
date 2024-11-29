@@ -1,0 +1,132 @@
+import math
+from math import comb
+import timeit
+from fractions import Fraction
+from functools import lru_cache
+import numpy as np
+import matplotlib.pyplot as plt
+
+def brute_force(n,p): 
+    return sum(k**p for k in range(1, n+1))
+
+@lru_cache(None)
+def bernoulli_number(n):
+    if n == 0:
+        return Fraction(1)
+    elif n == 1:
+        return Fraction(-1, 2)
+    elif n % 2 == 1 and n > 1:
+        return Fraction(0)
+
+    sigma = Fraction(0)
+    for k in range(n):
+        sigma += Fraction(math.comb(n + 1, k)) * bernoulli_number(k)
+
+    return -sigma / Fraction(n + 1)
+
+def bernoulli_list(p): 
+    b_list = []
+    for i in range(p+1): 
+        b_list.append(bernoulli_number(i))
+    if p >= 1: 
+        b_list[1] = Fraction(1, 2)
+    return b_list
+
+def faulhaber(n, p): 
+    sigma1 = Fraction(0)
+    bernoulli_numbers = bernoulli_list(p)
+    for r in range(p+1): 
+        sigma1 += math.comb(p+1, r) * bernoulli_numbers[r] * Fraction(n**(p-r+1))
+    result = sigma1 / Fraction(p+1)
+
+    if result.denominator == 1:
+        return int(result)
+    else:
+        numerator, denominator = result.numerator, result.denominator
+        if numerator % denominator == 0:
+            return int(numerator // denominator)
+        else:
+            raise ValueError("error")
+
+def researched_formula(n, p):
+    sum_k3 = sum(k**3 for k in range(1, n+1))
+    rhs = n**(p-3) * sum_k3
+
+    sum_m_term = 0
+    for m in range(1, n):
+        sum_k3_m = sum(k**3 for k in range(1, m+1))
+        sum_m_term += sum_k3_m * ((m+1)**(p-3) - m**(p-3))
+
+    rhs -= sum_m_term
+    return rhs
+
+def get_time_brute_force(n): 
+    bf_timelist = []
+    for p in range (4, 100): 
+        start1 = timeit.default_timer()
+        brute_force(n,p)
+        stop1 = timeit.default_timer()
+        bf_timelist.append(stop1 - start1)
+    return (bf_timelist)
+
+def get_time_faulhaber(n): 
+    faulhaber_timelist = []
+    for p in range (4, 100): 
+        start1 = timeit.default_timer()
+        bernoulli_number(p)
+        bernoulli_list(p)
+        faulhaber(n,p)
+        stop1 = timeit.default_timer()
+        faulhaber_timelist.append(stop1-start1)
+    return (faulhaber_timelist)
+
+def get_time_research(n): 
+    research_timelist = []
+    for p in range (4, 100): 
+        start1 = timeit.default_timer()
+        researched_formula(n,p)
+        stop1 = timeit.default_timer()
+        research_timelist.append(stop1-start1)
+    return (research_timelist)
+
+def average_time(timelist):
+    average_time = []
+    for i in range (min(len(element) for element in timelist)): 
+        itime = []
+        for element in timelist: 
+            itime.append(element[i])
+        average_time.append(np.mean(itime))
+    return average_time
+
+def main(): 
+    for n in range (10): 
+        for p in range (4, 100): 
+            print("For n = ", n, "and p = ", p) 
+            print("Traditional Calculations " , brute_force(n,p)) 
+            print("Faulhaber Formula = ", faulhaber(n,p)) 
+            print("Researched Formula = ", researched_formula(n,p)) 
+            print(brute_force(n,p) == faulhaber(n,p) == researched_formula(n,p))
+    brute_force_all_times = []
+    faulhaber_all_times = []
+    research_all_times = []
+    for n in range (10): 
+        brute_force_all_times.append(get_time_brute_force(n))
+        faulhaber_all_times.append(get_time_faulhaber(n))
+        research_all_times.append(get_time_research(n))
+        
+    brute_force_average_times = average_time(brute_force_all_times)
+    faulhaber_average_times = average_time(faulhaber_all_times)
+    research_average_times = average_time(research_all_times)
+
+    plt.plot(brute_force_average_times, color = 'green', linestyle = '-', label = "brute force")
+    plt.plot(faulhaber_average_times, color = 'red', linestyle = '-', label = "faulhaber")
+    plt.plot(research_average_times, color = 'blue', linestyle = '-', label = "research")
+    
+    plt.ylabel = "Execution Time (s)"
+    plt.xlabel = "Power Integer Raised to"
+    plt.ylim = (0,1.5e-3)
+    plt.xlim = (0,100)
+    plt.tight_layout()
+    plt.show()
+
+main()
